@@ -1,0 +1,4 @@
+// El ejemplo conductor del video.
+let resultado = 6 * 7;
+print(resultado);
+

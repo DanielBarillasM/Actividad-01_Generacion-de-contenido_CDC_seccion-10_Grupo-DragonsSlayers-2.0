@@ -1,0 +1,288 @@
+\documentclass[11pt,letterpaper]{article}
+\usepackage[margin=1.8cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[spanish,es-nodecimaldot]{babel}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{enumitem}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{tcolorbox}
+\tcbuselibrary{breakable,skins}
+
+\renewcommand{\familydefault}{\sfdefault}
+
+\definecolor{Ink}{HTML}{07131E}
+\definecolor{Surface}{HTML}{0D2130}
+\definecolor{Paper}{HTML}{EDF6F9}
+\definecolor{Muted}{HTML}{607D8B}
+\definecolor{Source}{HTML}{168ED1}
+\definecolor{Token}{HTML}{D79A00}
+\definecolor{Syntax}{HTML}{7656C8}
+\definecolor{Semantic}{HTML}{D53B5A}
+\definecolor{Target}{HTML}{168B50}
+
+\hypersetup{colorlinks=true,linkcolor=Source,urlcolor=Source,citecolor=Target,pdftitle={De MiniLang a WebAssembly},pdfauthor={DragonsSlayers 2.0}}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.55em}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\sffamily\small De MiniLang a WebAssembly}
+\fancyhead[R]{\sffamily\small DragonsSlayers 2.0}
+\fancyfoot[C]{\sffamily\small\thepage}
+\renewcommand{\headrulewidth}{0.3pt}
+\makeatletter
+\renewcommand{\section}{\@startsection{section}{1}{0pt}{2.1ex plus .4ex minus .2ex}{1.0ex}{\sffamily\Large\bfseries\color{Ink}}}
+\makeatother
+
+\newtcolorbox{segmento}[4]{
+  enhanced,
+  breakable,
+  colback=Paper!45,
+  colframe=#4,
+  boxrule=0.8pt,
+  leftrule=4pt,
+  arc=0pt,
+  title={\sffamily\bfseries #1\quad{\normalfont\color{Muted}#2\enspace |\enspace Voz: #3}},
+  coltitle=Ink,
+  fonttitle=\sffamily,
+  attach boxed title to top left={xshift=0mm,yshift=-0.1mm},
+  boxed title style={colback=Paper,colframe=#4,boxrule=0.8pt,arc=0pt},
+  top=1.2em
+}
+
+\newcommand{\visual}[1]{\textbf{Visual:} #1}
+\newcommand{\audio}[1]{\textbf{Audio:} #1}
+\newcommand{\accion}[1]{\textbf{Acción:} #1}
+
+\begin{document}
+\pagenumbering{roman}
+
+\begin{titlepage}
+  \pagecolor{Ink}\color{Paper}
+  \vspace*{1.3cm}
+  {\sffamily\large Universidad del Valle de Guatemala\par}
+  {\sffamily\large Construcción de Compiladores · Sección 10\par}
+  \vfill
+  {\color{Source}\rule{\textwidth}{4pt}\par}
+  \vspace{0.7cm}
+  {\sffamily\fontsize{33}{36}\selectfont\bfseries De MiniLang a WebAssembly\par}
+  \vspace{0.4cm}
+  {\sffamily\LARGE Anatomía visual de un compilador\par}
+  \vspace{0.7cm}
+  {\color{Target}\rule{0.62\textwidth}{2pt}\par}
+  \vfill
+  {\sffamily\Large Actividad 01 · Generación de contenido\par}
+  \vspace{1cm}
+  {\sffamily\large\bfseries DragonsSlayers 2.0\par}
+  \vspace{0.35cm}
+  {\sffamily Pablo Daniel Barillas Moreno\par}
+  {\sffamily Hugo Daniel Barillas Ajín\par}
+  {\sffamily Ernesto Ascencio\par}
+  \vfill
+  {\sffamily\small Guion técnico y de exposición · Duración objetivo: 14:40\par}
+  {\sffamily\small Octubre de 2026\par}
+\end{titlepage}
+\nopagecolor\color{black}
+\pagenumbering{arabic}
+
+\section{Propósito y enfoque}
+
+El video sigue un único programa mientras cambia de representación: caracteres, tokens, árbol sintáctico, símbolos, WebAssembly textual y ejecución. La frase conductora es: \emph{un compilador no comprende el programa de una sola vez; lo transforma hasta hacer explícito su significado}.
+
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+Audiencia & Estudiantes de computación que saben programar, pero aún perciben el compilador como una caja negra.\\
+Objetivo & Diferenciar las fases principales y observar cómo una expresión se convierte en instrucciones WebAssembly ejecutables.\\
+Duración & 14 minutos y 40 segundos, más o menos 20 segundos según ritmo natural.\\
+Formato & 1920x1080, 30 fps, voz principal a -14 LUFS aproximados y música discreta.\\
+Licencia & Creative Commons Attribution; solo recursos propios, CC BY o dominio público.\\
+\bottomrule
+\end{tabularx}
+
+\section{Guion cronológico}
+
+\begin{segmento}{1. El resultado antes del proceso}{00:00--00:42}{Pablo}{Source}
+\visual{Aparición breve de Pablo. Corte al clip Manim \texttt{HookScene}. En pantalla aparece el programa y luego el resultado 42.}
+
+\audio{Ambiente electrónico muy tenue. Efecto de señal al recorrer la flecha y acorde corto al aparecer el resultado.}
+
+\textbf{Narración:} Escribimos programas todos los días y esperamos que la computadora los ejecute. Pero para una máquina, esta línea todavía no es una multiplicación ni una declaración: es solamente una secuencia de caracteres. En este video construiremos un lenguaje pequeño llamado MiniLang y seguiremos este programa desde el texto original hasta un módulo real de WebAssembly. Al final obtendremos este resultado: cuarenta y dos. La pregunta es qué tuvo que ocurrir para llegar hasta aquí.
+\end{segmento}
+
+\begin{segmento}{2. Abrir la caja negra}{00:42--01:32}{Pablo}{Target}
+\visual{Clip \texttt{PipelineScene}. La señal recorre Código, Lexer, Parser, Semántica, WAT y Runtime.}
+
+\textbf{Narración:} Un compilador no transforma todo el programa de una sola vez. Lo procesa mediante una cadena de representaciones. El lexer convierte caracteres en tokens. El parser organiza esos tokens en un árbol. El análisis semántico comprueba que los nombres y operaciones tengan sentido. Después, un generador produce instrucciones de otro lenguaje. En nuestro caso, ese destino será WebAssembly. Cada etapa resuelve una clase distinta de problema y entrega información más estructurada a la siguiente. Esta separación también permite localizar errores y probar cada componente por separado.
+\end{segmento}
+
+\begin{segmento}{3. El lenguaje que construiremos}{01:32--02:32}{Hugo}{Source}
+\visual{Presentación HTML, diapositiva ``MiniLang hace poco, pero lo hace de verdad''. Mostrar ejemplos válidos e inválidos.}
+
+\textbf{Narración:} MiniLang es deliberadamente pequeño. Solo maneja enteros de treinta y dos bits, declaraciones con la palabra \texttt{let}, operaciones de suma, resta, multiplicación y división, paréntesis y una instrucción \texttt{print}. Esa limitación es una decisión de diseño: queremos observar el proceso completo, no ocultarlo detrás de cientos de características. La gramática separa suma y multiplicación en niveles diferentes, por lo que siete por dos se agrupa antes de sumarse con seis. No incluimos funciones del usuario, cadenas, ciclos ni memoria manual. Así mantenemos el alcance verificable dentro del video.
+
+\begin{tcolorbox}[colback=Paper!45,colframe=Source,arc=0pt,boxrule=0.6pt]
+\ttfamily let resultado = 6 * 7;\\
+print(resultado);
+\end{tcolorbox}
+\end{segmento}
+
+\begin{segmento}{4. Lexer: reconocer las piezas}{02:32--04:02}{Hugo}{Token}
+\visual{Clip \texttt{LexerScene}. Luego, acercamiento a la salida real del comando \texttt{python -m minilang examples/demo.mini --tokens}.}
+
+\textbf{Narración:} El lexer recorre el código carácter por carácter. Cuando encuentra letras, continúa hasta formar una palabra. Después decide si esa palabra es reservada, como \texttt{let} o \texttt{print}, o si es un identificador creado por el programador. Cuando encuentra dígitos consecutivos, forma un token numérico y conserva su valor. Los símbolos de un solo carácter, como igual, asterisco o punto y coma, tienen su propio tipo.
+
+El resultado no es todavía un árbol ni una instrucción ejecutable. Es una secuencia: \texttt{LET}, \texttt{IDENTIFIER}, \texttt{EQUAL}, \texttt{NUMBER}, \texttt{STAR}, otro \texttt{NUMBER} y \texttt{SEMICOLON}. Cada token también guarda línea y columna. Esa posición permite producir diagnósticos útiles. Si escribimos una arroba, el lexer se detiene y reporta exactamente dónde apareció el carácter que MiniLang no reconoce. Por eso un error léxico ocurre antes de que el parser intente estudiar la estructura.
+\end{segmento}
+
+\begin{segmento}{5. Parser: recuperar la estructura}{04:02--05:52}{Hugo}{Syntax}
+\visual{Usar primero \texttt{GrammarScene} para explicar precedencia y continuar con \texttt{AstScene}. Comparar \texttt{6 + 7 * 2} con \texttt{(6 + 7) * 2}.}
+
+\textbf{Narración:} El parser recibe la lista de tokens y aplica las reglas de la gramática. Una declaración comienza con \texttt{let}, continúa con un identificador, un signo igual, una expresión y termina con punto y coma. Las expresiones se dividen por precedencia. El nivel de multiplicación consume estrellas y divisiones antes de regresar al nivel de suma. Así, en seis más siete por dos, el nodo de multiplicación queda debajo del nodo de suma.
+
+El resultado es un árbol sintáctico abstracto, o AST. Es abstracto porque conserva la información que necesitaremos más adelante y descarta detalles que ya cumplieron su propósito, como algunos paréntesis o signos de puntuación. Nuestra declaración se convierte en un nodo \texttt{LetStatement}. Ese nodo guarda el nombre \texttt{resultado} y un inicializador \texttt{Multiply} con los literales seis y siete. Si falta el punto y coma, la secuencia no coincide con la regla y obtenemos un error sintáctico. El lexer sí reconoció las piezas; el parser no logró organizarlas.
+\end{segmento}
+
+\begin{segmento}{6. Semántica: comprobar el significado}{05:52--07:22}{Ernesto}{Semantic}
+\visual{Clip \texttt{SemanticScene}. Mostrar tabla de símbolos y el archivo \texttt{examples/error\_semantico.mini}.}
+
+\textbf{Narración:} Un programa puede tener una estructura válida y aun así carecer de sentido. Esta declaración respeta la gramática, pero utiliza \texttt{desconocida} antes de declararla. El análisis semántico recorre el AST y mantiene una tabla de símbolos. Cada vez que encuentra una declaración, registra el nombre, su tipo y el local de WebAssembly que le corresponde. Cuando encuentra un identificador dentro de una expresión, comprueba que ya exista.
+
+MiniLang también rechaza una variable declarada dos veces en el mismo ámbito. Como solo manejamos enteros, todos los símbolos tienen tipo \texttt{i32}. En un lenguaje real, esta etapa incluiría reglas de compatibilidad de tipos, ámbitos anidados y firmas de funciones. La distinción importante es esta: la sintaxis pregunta si el programa tiene una forma permitida; la semántica pregunta si esa forma representa una operación válida dentro del lenguaje.
+\end{segmento}
+
+\begin{segmento}{7. Del AST a WebAssembly}{07:22--09:34}{Ernesto}{Target}
+\visual{Comenzar con AST. Hacer transición al clip \texttt{StackScene}. Mantener visibles las instrucciones actuales y la pila.}
+
+\textbf{Narración:} Cuando el programa supera las comprobaciones, el generador recorre el árbol y emite WebAssembly Text Format, o WAT. WebAssembly usa una máquina de pila. La instrucción \texttt{i32.const 6} coloca un seis en la pila. La siguiente coloca un siete. \texttt{i32.mul} consume ambos operandos y coloca cuarenta y dos. \texttt{local.set} retira ese valor y lo almacena en el local asociado con \texttt{resultado}. Después, \texttt{local.get} vuelve a colocar el valor en la pila y \texttt{call} invoca la función de impresión.
+
+El orden de recorrido del AST determina el orden de estas instrucciones: primero el operando izquierdo, luego el derecho y finalmente el operador. Este esquema funciona también para árboles más profundos. WebAssembly valida que la pila y los tipos sean consistentes. Si una suma espera dos enteros y la pila no los contiene, el módulo no es válido. Nuestra implementación genera WAT, una representación textual legible. Wasmtime se encarga de analizarla, convertirla al formato interno correspondiente y ejecutar el módulo. No afirmamos haber implementado manualmente la codificación binaria de WebAssembly.
+\end{segmento}
+
+\begin{segmento}{8. El contrato con el entorno}{09:34--10:24}{Pablo}{Target}
+\visual{Clip \texttt{RuntimeScene}: validar, instanciar y ejecutar. Mostrar el módulo WASM conectado con el entorno mediante \texttt{env.print\_i32}.}
+
+\textbf{Narración:} Hay un detalle importante: WebAssembly no incluye una instrucción universal para imprimir en una terminal. El módulo importa una función llamada \texttt{env.print\_i32}. El entorno anfitrión, en nuestra demostración Wasmtime, proporciona esa función y decide qué hacer con el valor. En un navegador podría escribirlo en la página; en Python lo añadimos a una lista para verificar el resultado. Esta frontera es parte del diseño de WebAssembly: el módulo no obtiene acceso ambiental por accidente. Solo puede usar las capacidades que el anfitrión le entrega explícitamente.
+\end{segmento}
+
+\begin{segmento}{9. Una optimización pequeña}{10:24--11:14}{Ernesto}{Token}
+\visual{Clip \texttt{OptimizationScene}. Comparar WAT sin optimizar y optimizado.}
+
+\textbf{Narración:} Antes de generar código podemos realizar una optimización sencilla llamada \emph{constant folding}. Como seis y siete son constantes, el compilador puede evaluar la multiplicación durante la compilación. El árbol \texttt{Multiply} se reemplaza por un literal cuarenta y dos. La salida pasa de tres instrucciones a una sola: \texttt{i32.const 42}. La regla fundamental es preservar el comportamiento observable. Por eso nuestra optimización solo evalúa operaciones constantes seguras y evita plegar una división entre cero.
+\end{segmento}
+
+\begin{segmento}{10. Demostración completa}{11:14--13:12}{Pablo}{Source}
+\visual{Usar \texttt{presentacion/index.html\#12}. Ejecutar cuatro pasos: tokens, AST, WAT y salida. Después mostrar terminal con las pruebas.}
+
+\textbf{Narración:} Veamos el recorrido completo usando los artefactos del proyecto. Este es el programa original. Al compilar, obtenemos primero los tokens con sus lexemas. En la pestaña AST observamos la declaración, la multiplicación y la instrucción de impresión. En WAT aparecen el local, las constantes, la multiplicación y la llamada importada. Finalmente ejecutamos el módulo y obtenemos cuarenta y dos.
+
+Ahora modificamos la expresión a seis más siete por dos. El resultado es veinte porque la multiplicación tiene mayor precedencia. Si utilizamos un nombre no declarado, el compilador no genera WebAssembly: se detiene en análisis semántico. Además de esta demostración, el repositorio contiene siete pruebas automatizadas. Cubren la ejecución correcta, la precedencia, el plegado de constantes, variables no declaradas, declaraciones duplicadas, punto y coma faltante y caracteres desconocidos. Las pruebas conectan la explicación con comportamiento reproducible.
+\end{segmento}
+
+\begin{segmento}{11. Qué construimos realmente}{13:12--14:07}{Hugo}{Syntax}
+\visual{Diapositiva de alcance: Construimos / Delegamos / No incluye.}
+
+\textbf{Narración:} Nuestro compilador implementa las etapas suficientes para mostrar el proceso completo: análisis léxico, parsing, AST, comprobación semántica, una optimización local y generación de WAT. Delegamos el ensamblado y la ejecución a Wasmtime, de la misma manera que un compilador real utiliza herramientas y runtimes especializados. MiniLang no pretende competir con un lenguaje de producción. Su valor está en que cada transformación puede inspeccionarse, probarse y explicarse. Si quisiéramos ampliarlo, los siguientes pasos naturales serían condiciones, ciclos, funciones y un sistema de tipos más expresivo.
+\end{segmento}
+
+\begin{segmento}{12. Cierre}{14:07--14:36}{Todos}{Target}
+\visual{Montaje rápido de Código, Tokens, AST, WAT y 42. Una frase por integrante.}
+
+\textbf{Pablo:} Comenzamos con caracteres que por sí solos no expresaban una estructura para la máquina.
+
+\textbf{Hugo:} El lexer, el parser y la semántica hicieron explícitas las piezas, sus relaciones y sus reglas.
+
+\textbf{Ernesto:} El generador preservó ese significado y lo convirtió en instrucciones WebAssembly ejecutables.
+
+\textbf{Todos o voz final:} Un compilador no es una caja negra: es una cadena verificable de transformaciones.
+\end{segmento}
+
+\begin{segmento}{13. Créditos}{14:36--14:50}{Sin narración}{Target}
+\visual{Usar \texttt{CreditsScene}. Su duración es 12.4 segundos y debe conservarse completa.}
+
+\audio{Música en cierre suave. Sin voz para facilitar la lectura.}
+
+Debe aparecer: Pablo Daniel Barillas Moreno; Hugo Daniel Barillas Ajín; Ernesto Ascencio; Universidad del Valle de Guatemala; Construcción de Compiladores, Sección 10; licencia Creative Commons Attribution; vínculo a fuentes y repositorio si la política del curso lo permite.
+\end{segmento}
+
+\section{Mapa de animaciones Manim v02}
+
+El montaje maestro \texttt{minilang-animaciones-v02.mp4} dura 3:13.46. Los clips se insertan en los bloques indicados; no es necesario usarlos consecutivamente.
+
+\begin{tabularx}{\textwidth}{@{}lrrX@{}}
+\toprule
+Escena & Duración & Bloque & Función narrativa\\
+\midrule
+\texttt{HookScene} & 16.50 s & 1 & Plantear la pregunta y revelar 42.\\
+\texttt{PipelineScene} & 24.90 s & 2 & Recorrer los contratos entre etapas.\\
+\texttt{LexerScene} & 22.23 s & 4 & Escanear lexemas y producir tokens.\\
+\texttt{GrammarScene} & 17.47 s & 5 & Explicar precedencia antes del árbol.\\
+\texttt{AstScene} & 22.00 s & 5 & Construir y evaluar el subárbol.\\
+\texttt{SemanticScene} & 14.47 s & 6 & Registrar símbolos y localizar un error.\\
+\texttt{OptimizationScene} & 15.90 s & 9 & Plegar constantes y comparar costo.\\
+\texttt{StackScene} & 27.00 s & 7 & Ejecutar seis instrucciones paso a paso.\\
+\texttt{RuntimeScene} & 20.60 s & 8 & Cruzar la frontera WASM--host.\\
+\texttt{CreditsScene} & 12.40 s & 13 & Dar crédito y permitir lectura completa.\\
+\bottomrule
+\end{tabularx}
+
+\section{Plan de grabación}
+
+\begin{tabularx}{\textwidth}{@{}p{2.4cm}p{3.2cm}X@{}}
+\toprule
+Responsable & Bloques & Indicaciones\\
+\midrule
+Pablo & 1, 2, 8, 10 y cierre & Grabar introducción y cierre a cámara. La demostración debe capturarse en una toma de respaldo aunque después se edite.\\
+Hugo & 3, 4, 5, 11 y cierre & Mantener ritmo didáctico; hacer una pausa después de cada definición importante.\\
+Ernesto & 6, 7, 9 y cierre & Sincronizar la narración con tabla de símbolos, pila y optimización.\\
+Equipo & Créditos y revisión & Escuchar con audífonos y altavoces; validar nombres, fechas, licencias y fuentes.\\
+\bottomrule
+\end{tabularx}
+
+\section{Lista de control editorial}
+
+\begin{itemize}[leftmargin=1.5em]
+  \item No acelerar la voz para alcanzar la duración; ajustar silencios y visuales.
+  \item Mostrar cada fragmento de código con tamaño legible y resaltar solo la línea narrada.
+  \item Añadir subtítulos revisados manualmente.
+  \item Mantener música al menos 18 dB por debajo de la voz como punto de partida.
+  \item Conservar los créditos durante diez segundos o más.
+  \item Verificar que cualquier recurso externo permita publicación bajo CC BY.
+  \item Publicar el video antes del 4 de noviembre de 2026 y comprobar el enlace desde otra sesión.
+\end{itemize}
+
+\section{Referencias base}
+
+\begin{thebibliography}{9}
+\bibitem{wasm}
+WebAssembly Community Group. \emph{WebAssembly Core Specification, Release 3.0}. 2026.\\
+\url{https://webassembly.github.io/spec/core/}
+
+\bibitem{crafting}
+Robert Nystrom. \emph{Crafting Interpreters}. Genever Benning, 2021.\\
+\url{https://craftinginterpreters.com/}
+
+\bibitem{engineering}
+Keith D. Cooper y Linda Torczon. \emph{Engineering a Compiler}. Tercera edición, Morgan Kaufmann, 2022.
+
+\bibitem{dragon}
+Alfred V. Aho, Monica S. Lam, Ravi Sethi y Jeffrey D. Ullman. \emph{Compilers: Principles, Techniques, and Tools}. Segunda edición, Pearson, 2006.
+
+\bibitem{wasmtime}
+Bytecode Alliance. \emph{Wasmtime Documentation}.\\
+\url{https://docs.wasmtime.dev/}
+
+\bibitem{manim}
+Manim Community. \emph{Manim Community Documentation}.\\
+\url{https://docs.manim.community/}
+
+\bibitem{youtubecc}
+YouTube Help. \emph{License types on YouTube}.\\
+\url{https://support.google.com/youtube/answer/2797468}
+\end{thebibliography}
+
+\end{document}
+

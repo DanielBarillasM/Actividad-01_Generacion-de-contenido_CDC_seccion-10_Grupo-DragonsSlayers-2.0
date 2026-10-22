@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Presentacion interactiva: De MiniLang a WebAssembly">
+  <title>De MiniLang a WebAssembly · DragonsSlayers 2.0</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#deck">Ir a la presentacion</a>
+  <main id="deck" class="deck" aria-live="polite">
+    <section class="slide slide--hero is-active" data-title="Inicio">
+      <div class="registration" aria-hidden="true"></div>
+      <div class="hero-copy">
+        <p class="course">Construcción de Compiladores · Sección 10</p>
+        <h1>De MiniLang<br>a WebAssembly</h1>
+        <p class="hero-question">¿Cómo se convierte texto en una instrucción ejecutable?</p>
+        <button class="compile-button" data-action="next">Seguir la señal</button>
+      </div>
+      <div class="hero-trace" aria-label="Programa MiniLang y resultado">
+        <pre><code><span class="kw">let</span> resultado = <span class="num">6</span> * <span class="num">7</span>;
+<span class="fn">print</span>(resultado);</code></pre>
+        <div class="signal-line"></div>
+        <output>42</output>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Pregunta">
+      <div class="section-label">La caja negra</div>
+      <blockquote>Un compilador no comprende el programa de una sola vez: lo transforma hasta hacer explícito su significado.</blockquote>
+      <div class="before-after">
+        <div><span>Entrada</span><code>let resultado = 6 * 7;</code></div>
+        <div class="pulse-arrow" aria-hidden="true">······▶</div>
+        <div><span>Salida</span><code>i32.mul</code></div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Proceso">
+      <div class="section-label">Una cadena de traducciones</div>
+      <h2>El recorrido completo</h2>
+      <div class="pipeline" role="list">
+        <div class="pipeline-step source" role="listitem"><b>Código</b><small>caracteres</small></div>
+        <div class="pipeline-step token" role="listitem"><b>Lexer</b><small>tokens</small></div>
+        <div class="pipeline-step syntax" role="listitem"><b>Parser</b><small>AST</small></div>
+        <div class="pipeline-step semantic" role="listitem"><b>Semántica</b><small>símbolos</small></div>
+        <div class="pipeline-step target" role="listitem"><b>Generador</b><small>WAT</small></div>
+        <div class="pipeline-step result" role="listitem"><b>Runtime</b><small>42</small></div>
+      </div>
+      <p class="slide-note">Cada etapa recibe una representación y entrega otra más estructurada.</p>
+    </section>
+
+    <section class="slide" data-title="Lenguaje">
+      <div class="section-label">Alcance controlado</div>
+      <h2>MiniLang hace poco, pero lo hace de verdad</h2>
+      <div class="split">
+        <div class="spec-list">
+          <p><span class="spec-mark">+</span> Variables enteras <code>i32</code></p>
+          <p><span class="spec-mark">+</span> Operadores <code>+ - * /</code></p>
+          <p><span class="spec-mark">+</span> Precedencia y paréntesis</p>
+          <p><span class="spec-mark">+</span> Salida con <code>print(...)</code></p>
+        </div>
+        <pre class="code-window"><code><span class="comment">// Programa valido</span>
+<span class="kw">let</span> base = <span class="num">6</span>;
+<span class="kw">let</span> resultado = base * <span class="num">7</span>;
+<span class="fn">print</span>(resultado);</code></pre>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Lexer">
+      <div class="section-label section-label--token">Análisis léxico</div>
+      <h2>El texto se separa en tokens</h2>
+      <pre class="source-line"><code><span class="kw">let</span> resultado = <span class="num">6</span> * <span class="num">7</span>;</code></pre>
+      <div class="token-stream" aria-label="Tokens producidos">
+        <span>LET</span><span>IDENTIFIER<br><small>resultado</small></span><span>EQUAL</span><span>NUMBER<br><small>6</small></span><span>STAR</span><span>NUMBER<br><small>7</small></span><span>SEMICOLON</span>
+      </div>
+      <p class="slide-note">El lexer reconoce piezas. Todavía no conoce la estructura completa.</p>
+    </section>
+
+    <section class="slide" data-title="Parser">
+      <div class="section-label section-label--syntax">Análisis sintáctico</div>
+      <h2>Los tokens adquieren estructura</h2>
+      <div class="ast" role="img" aria-label="Arbol sintactico de la declaracion">
+        <div class="node node--root">LetStatement</div>
+        <div class="branch branch--left"></div><div class="branch branch--right"></div>
+        <div class="node node--name">resultado</div>
+        <div class="node node--binary">Multiply</div>
+        <div class="branch branch--lower-left"></div><div class="branch branch--lower-right"></div>
+        <div class="node node--six">6</div><div class="node node--seven">7</div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Precedencia">
+      <div class="section-label section-label--syntax">La gramática decide</div>
+      <h2>Multiplicar ocurre antes que sumar</h2>
+      <div class="precedence-demo">
+        <code>6 + 7 * 2</code>
+        <div class="precedence-bars" aria-hidden="true"><span class="multiply">7 * 2</span><span class="addition">6 + (14)</span></div>
+        <output>20</output>
+      </div>
+      <p class="slide-note">El AST conserva la jerarquía; los paréntesis ya no son necesarios.</p>
+    </section>
+
+    <section class="slide" data-title="Semantica">
+      <div class="section-label section-label--semantic">Análisis semántico</div>
+      <h2>Puede tener forma correcta y aun no tener sentido</h2>
+      <div class="split split--semantic">
+        <pre class="code-window"><code><span class="kw">let</span> resultado = <span class="error-name">desconocida</span> + <span class="num">1</span>;</code></pre>
+        <div class="diagnostic">
+          <p>Linea 1, columna 17</p>
+          <strong>La variable “desconocida” no fue declarada.</strong>
+          <div class="symbol-table"><span>resultado</span><span>i32</span><span>local 0</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="WAT">
+      <div class="section-label section-label--target">Generacion de codigo</div>
+      <h2>El AST se traduce a una máquina de pila</h2>
+      <div class="wat-layout">
+        <pre class="code-window wat"><code>i32.const 6
+i32.const 7
+i32.mul
+local.set $resultado
+local.get $resultado
+call $print_i32</code></pre>
+        <div class="stack" aria-label="Pila WebAssembly">
+          <span class="stack-label">Pila</span>
+          <div class="stack-cell">42</div>
+          <div class="stack-base"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Host">
+      <div class="section-label section-label--target">Un detalle importante</div>
+      <h2>WebAssembly no imprime por sí solo</h2>
+      <div class="host-diagram">
+        <div class="module-box"><strong>Modulo WASM</strong><code>call $print_i32</code></div>
+        <div class="contract"><span>import</span><b>env.print_i32</b></div>
+        <div class="module-box host-box"><strong>Navegador / Wasmtime</strong><code>output.append(valor)</code></div>
+      </div>
+      <p class="slide-note">El entorno anfitrión proporciona las capacidades externas del módulo.</p>
+    </section>
+
+    <section class="slide" data-title="Optimizacion">
+      <div class="section-label">Optimización local</div>
+      <h2>Mismo significado, menos trabajo</h2>
+      <div class="optimization">
+        <pre><code>i32.const 6
+i32.const 7
+i32.mul</code></pre>
+        <div class="fold-symbol">fold</div>
+        <pre class="optimized"><code>i32.const 42</code></pre>
+      </div>
+      <p class="slide-note">Constant folding evalúa expresiones constantes durante la compilación.</p>
+    </section>
+
+    <section class="slide slide--lab" data-title="Explorador">
+      <div class="section-label">Demostracion interactiva</div>
+      <h2>Compiler Explorer</h2>
+      <div class="explorer">
+        <div class="editor-pane">
+          <label for="source">Codigo MiniLang</label>
+          <textarea id="source" spellcheck="false">let resultado = 6 * 7;
+print(resultado);</textarea>
+          <button id="compile">Compilar y ejecutar</button>
+        </div>
+        <div class="output-pane">
+          <div class="tabs" role="tablist" aria-label="Etapas">
+            <button role="tab" aria-selected="true" data-tab="tokens">Tokens</button>
+            <button role="tab" aria-selected="false" data-tab="ast">AST</button>
+            <button role="tab" aria-selected="false" data-tab="wat">WAT</button>
+            <button role="tab" aria-selected="false" data-tab="run">Salida</button>
+          </div>
+          <pre id="compiler-output" tabindex="0"></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Limites">
+      <div class="section-label">Honestidad técnica</div>
+      <h2>Que construimos —y que no</h2>
+      <div class="scope-grid">
+        <div><strong>Construimos</strong><p>Lexer, parser, AST, semántica, optimización, generador WAT y pruebas.</p></div>
+        <div><strong>Delegamos</strong><p>Wasmtime valida, ensambla y ejecuta el módulo WebAssembly.</p></div>
+        <div><strong>No incluye</strong><p>Funciones del usuario, memoria manual, cadenas, ciclos ni generación binaria directa.</p></div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Cierre">
+      <div class="section-label">La caja queda abierta</div>
+      <h2>Una transformacion a la vez</h2>
+      <div class="closing-trace">
+        <code>MiniLang</code><span></span><code>Tokens</code><span></span><code>AST</code><span></span><code>WAT</code><span></span><strong>42</strong>
+      </div>
+      <p class="closing-copy">Cada representación elimina ambigüedad y acerca el programa a una máquina ejecutable.</p>
+    </section>
+
+    <section class="slide slide--credits" data-title="Creditos">
+      <p class="course">Universidad del Valle de Guatemala</p>
+      <h2>DragonsSlayers 2.0</h2>
+      <div class="credits-list">
+        <p>Pablo Daniel Barillas Moreno</p>
+        <p>Hugo Daniel Barillas Ajín</p>
+        <p>Ernesto Ascencio</p>
+      </div>
+      <p>Construcción de Compiladores · Sección 10 · 2026</p>
+      <p class="license">Contenido original para publicación bajo Creative Commons Attribution.</p>
+    </section>
+  </main>
+
+  <nav class="deck-controls" aria-label="Controles de presentacion">
+    <button id="previous" aria-label="Diapositiva anterior">←</button>
+    <div class="progress"><span id="progress-bar"></span></div>
+    <span id="counter">1 / 15</span>
+    <button id="next" aria-label="Diapositiva siguiente">→</button>
+  </nav>
+  <script src="app.js"></script>
+</body>
+</html>
+

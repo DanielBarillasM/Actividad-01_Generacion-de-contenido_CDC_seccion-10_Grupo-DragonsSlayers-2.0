@@ -16,3 +16,25 @@ bin-release/
 # Project files, i.e. `.project`, `.actionScriptProperties` and `.flexProperties`
 # should NOT be excluded as they contain compiler settings and other important
 # information for Eclipse / Flash Builder.
+
+# Python caches and local environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
+# Local browser and visual-review artifacts
+.playwright-cli/
+tmp/
+
+# LaTeX intermediate files (keep the source and generated PDF)
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+missfont.log
+
+# Manim render cache and local concat manifest (final exports stay tracked)
+output/manim/
+output/video/manim-clips.txt
